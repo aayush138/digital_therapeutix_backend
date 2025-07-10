@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Match Results - Digital Therapeutics</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/x-icon" alt="Site Icon" />
+  <meta name="theme-color" content="#f3fdf2" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f3fdf2] flex flex-col justify-center px-4 py-10 text-gray-800">
+
+  <div class="mx-auto space-y-10 animate-fade-in">
+
+    <!-- Logo -->
+    <div class="mb-6 flex items-center justify-center">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="DTPx Logo" class="h-12" />
+    </div>
+
+    {% if no_match %}
+      <!-- No Match Message -->
+      <div class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-6 shadow text-center">
+        <h2 class="text-2xl font-bold mb-2">🚫 No Match Found</h2>
+        <p>
+          The uploaded sequence
+          <code class="bg-white border px-2 py-1 rounded text-sm">{{ uploaded_filename | e }}</code>
+          did not produce any high-confidence or exact match.
+        </p>
+        <p class="mt-2">Try again with a different sequence or reduce the threshold.</p>
+      </div>
+
+    {% else %}
+      <!-- Primary Match Result -->
+      <div class="bg-green-50 rounded-xl shadow-lg p-6 space-y-6">
+        <div class="flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-[#2e7d32]">🧬 Case #{{ report.id }}</h2>
+          {% if report.is_exact_match or (report.match_score and report.match_score >= 99.99) %}
+            <span class="text-xs bg-green-200 text-green-800 px-3 py-1 rounded-full font-semibold uppercase tracking-wide">Exact Match</span>
+          {% else %}
+            <span class="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-semibold uppercase tracking-wide">High Prob Match</span>
+          {% endif %}
+        </div>
+
+        <p class="text-lg font-bold text-[#f58c36]">
+          <strong>Match Score:</strong>
+          <span class="bg-yellow-100 px-2 py-1 rounded">{{ '%.2f' % (report.match_score or 0) }}%</span>
+        </p>
+
+        <!-- Bacteria Info -->
+        <div class="border border-green-500 rounded-lg p-5">
+          <h3 class="text-lg font-semibold mb-2 text-gray-700">🧫 Bacteria Information</h3>
+          <ul class="grid gap-x-8 gap-y-2 text-sm text-gray-700">
+            <li><strong>Name:</strong> {{ bacteria_info.name or "N/A" }}</li>
+            <li><strong>NCBI ID:</strong> {{ bacteria_info.ncbi_id or "N/A" }}</li>
+            <li><strong>Tax ID:</strong> {{ bacteria_info.tax_id or "N/A" }}</li>
+          </ul>
+        </div>
+
+        <!-- Phages -->
+        <h3 class="text-lg font-semibold text-gray-700">🦠 Associated Phages & Manufacturers</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {% for phage in phage_info_list %}
+            <div class="border border-green-500 rounded-lg p-4 shadow-sm">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-semibold text-gray-800">{{ phage.name }}</p>
+                  <p class="text-sm text-gray-500">NCBI: {{ phage.ncbi or "N/A" }}</p>
+                </div>
+              </div>
+              {% if phage.manufacturers %}
+                <ul class="mt-3 ml-4 list-disc text-sm text-gray-600">
+                  {% for m in phage.manufacturers %}
+                    <li>{{ m.name }} — ₹{{ m.price or "N/A" }}</li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="text-sm text-gray-400 mt-2">No manufacturers listed.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Additional Matches -->
+      {% if additional_outputs %}
+        <h3 class="text-xl font-semibold text-gray-800 mt-10">🔍 Additional Matches</h3>
+        <div class="space-y-6">
+          {% for add in additional_outputs %}
+            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+              <div class="flex justify-between">
+                <p class="text-lg font-bold text-[#f58c36]">
+                  <strong>Score:</strong>
+                  <span class="bg-yellow-100 px-2 py-1 rounded">{{ '%.2f' % (add.prob or 0) }}%</span>
+                </p>
+              </div>
+
+              <div class="bg-gray-50 rounded-md border p-4 text-sm">
+                <p><strong>Name:</strong> {{ add.bacteria_info.name or "N/A" }}</p>
+                <p><strong>NCBI ID:</strong> {{ add.bacteria_info.ncbi_id or "N/A" }}</p>
+                <p><strong>Tax ID:</strong> {{ add.bacteria_info.tax_id or "N/A" }}</p>
+              </div>
+
+              <h5 class="text-sm font-semibold mb-1">🧬 Phages & Manufacturers</h5>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {% for phage in add.phage_info_list %}
+                  <div class="p-3 rounded-md border mb-2 text-sm">
+                    <p><strong>{{ phage.name }}</strong> (NCBI: {{ phage.ncbi or "N/A" }})</p>
+                    {% if phage.manufacturers %}
+                      <ul class="ml-4 list-disc text-sm text-gray-600 mt-1">
+                        {% for m in phage.manufacturers %}
+                          <li>{{ m.name }} — ₹{{ m.price or "N/A" }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <p class="text-sm text-gray-400">No manufacturers available.</p>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <footer class="mt-16 text-xs text-center text-gray-400">
+    &copy; 2025 <strong>Digital Therapeutics</strong>. All rights reserved.
+    <a href="#" class="underline mx-2 hover:text-gray-600">Terms</a> ·
+    <a href="#" class="underline hover:text-gray-600">Privacy</a>
+  </footer>
+
+</body>
+</html>
