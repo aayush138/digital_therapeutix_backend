@@ -1,13 +1,14 @@
 from flask import Flask
-from models import db
-from seed.seed_data import create_dummy_data, load_bacteria_interactions, load_phage_interactions
+from models import db, User
+from seed.seed_data import create_dummy_data
 
 def seed_database(app):
     with app.app_context():
-        db.drop_all()
         db.create_all()
-
-        create_dummy_data()
-
-        db.session.commit()
-        print("✅ Seed data loaded!")
+        # Check if the User table is empty (or any other main table)
+        if not User.query.first():
+            create_dummy_data()
+            db.session.commit()
+            print("✅ Seed data loaded!")
+        else:
+            print("✅ Database already seeded, skipping seeding.")
