@@ -15,10 +15,6 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 
 db.init_app(app)
 
-# --- Seed the database automatically on app start ---
-seed_database(app)
-# ----------------------------------------------------
-
 
 with app.app_context():
     db.create_all()
